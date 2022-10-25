@@ -1,12 +1,20 @@
+import type Chat from "./Chat";
 import type User from "./User";
+import type userChat from "./userChat";
 
 export default class Message {
-    sender !: User;
+    id !: number;
+    from !: userChat;
+    to !: Chat;
+
     content !: string;
     timestamp !: Date;
 
-    public constructor(sender: User, content: string, timestamp: Date) {
-        this.sender = sender;
+    userChatId !: number;
+    chatId !: number;
+
+    public constructor(from: userChat, content: string, timestamp: Date) {
+        this.from = from;
         this.content = content;
         this.timestamp = timestamp;
     }

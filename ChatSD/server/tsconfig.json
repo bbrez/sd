@@ -1,13 +1,18 @@
 {
+    "extends": "@tsconfig/recommended/tsconfig.json",
     "compilerOptions": {
-        "module": "ES6",
-        "esModuleInterop": true,
-        "target": "ES6",
-        "moduleResolution": "Node",
+        "strict": true,
+        "outDir": "dist",
         "sourceMap": true,
-        "outDir": "build"
+        "esModuleInterop": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "noFallthroughCasesInSwitch": true,
+        "types": [
+            "node"
+        ],
+        "lib": [
+            "ESNext"
+        ]
     },
-    "lib": [
-        "es2015"
-    ]
 }
