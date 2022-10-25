@@ -15,7 +15,7 @@ class UserSocket {
 
 let connections = new Array<UserSocket>();
 
-
+//TODO logged user handling
 async function main() {
     server.on('connection', async (socket) => {
         console.log("[new connection]");
@@ -50,7 +50,9 @@ async function main() {
                     }
 
                     break;
-                }
+                };
+
+                //login handler
                 case "login": {
                     try {
                         let user = await prisma.user.findFirstOrThrow({
@@ -76,7 +78,8 @@ async function main() {
                         socket.close();
                     }
                     break;
-                }
+                };
+
                 //connect handler
                 case "connect": {
                     let user = await prisma.user.findFirstOrThrow({
@@ -121,6 +124,7 @@ async function main() {
                     break;
                 }
 
+                //new_chat handler
                 case "new_chat": {
                     let user = await prisma.user.findFirstOrThrow({
                         where: {
@@ -152,6 +156,7 @@ async function main() {
                     break;
                 }
 
+                //add_user handler
                 case "add_user": {
                     let user = await prisma.user.findFirstOrThrow({
                         where: {
@@ -205,11 +210,41 @@ async function main() {
                     break;
                 }
 
-                case "update_uc": {
+                case "chat_update": {
+                    let admin = await prisma.userChat.findFirstOrThrow({
+                        where: {
+                            id: msgData.admin,
+                            isAdmin: true,
+                            chatId: msgData.chat.id,
+                        },
+                    });
+
+                    let chat = await prisma.chat.update({
+                        where: {
+                            id: msgData.chat.id,
+                        },
+                        data: {
+                            name: msgData.chat.name,
+                            icon: msgData.chat.icon,
+                        },
+                    });
+
+                    //TODO broadcast new info
                     break;
                 }
 
-                case "update_chat": {
+                case "user_update": {
+                    let uc = await prisma.userChat.update({
+                        where: {
+                            id: msgData.user.id
+                        },
+                        data: {
+                            nickname: msgData.user.nickname,
+                            color: msgData.user.color
+                        }
+                    });
+
+                    //TODO broadcast new info
                     break;
                 }
 
@@ -219,9 +254,6 @@ async function main() {
                             id: msgData.admin.id,
                             isAdmin: true,
                         },
-                        include: {
-                            chat: true,
-                        }
                     });
 
                     console.log("admin found", admin);
@@ -235,7 +267,9 @@ async function main() {
                     socket.send(JSON.stringify({
                         result: "success",
                         type: "user_removed",
-                    }))
+                    }));
+
+                    //TODO broadcast new info
                     break;
 
 

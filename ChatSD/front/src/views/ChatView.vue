@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue';
+import { storeToRefs } from 'pinia';
+import router from '@/router';
+import { useUserStore } from '@/stores/user';
 import Chat from '@/lib/Chat';
 import Message from '@/lib/Message';
 import type userChat from '@/lib/userChat';
-import router from '@/router';
-import { useUserStore } from '@/stores/user';
-import { storeToRefs } from 'pinia';
-import { onMounted, onUnmounted, ref } from 'vue';
 import UserModal from '../components/OptionsModal.vue';
 
 const userStore = useUserStore();
@@ -54,6 +54,7 @@ function newChat() {
     messages: new Array<Message>(),
     nickname: getUser.value.name,
     color: "#000000",
+    isOnline: false,
     isAdmin: true,
     id: 0,
     userId: 0,
@@ -262,7 +263,8 @@ onUnmounted(() => {
             <span> Usuários</span>
           </div>
           <a v-for="c_user in getUser.chats[current_chat].chat.users" class="panel-block" @click="removeUser(c_user)">
-            <span class="panel-icon"><i class="fa-solid" :class="c_user.isAdmin ? 'fa-star' : 'fa-user'"></i></span>
+            <span class="panel-icon" :style="{ color: c_user.isOnline ? '#00aa00' : '' }"><i class="fa-solid"
+                :class="c_user.isAdmin ? 'fa-star' : 'fa-user'"></i></span>
             <span>{{ c_user.nickname }}</span>
           </a>
         </div>

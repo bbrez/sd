@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import User from '@/lib/User';
+import { ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import router from '@/router';
 import { useUserStore } from '@/stores/user';
-import { storeToRefs } from 'pinia';
-import { ref } from 'vue';
+import User from '@/lib/User';
 import SimpleModal from './SimpleModal.vue';
+
 
 defineEmits(['close']);
 const props = defineProps({
@@ -36,12 +37,15 @@ new_chat_name.value = getUser.value.chats[props.currentChat].chat.name;
 const new_chat_icon = ref("");
 new_chat_icon.value = getUser.value.chats[props.currentChat].chat.icon;
 
+
 function update_chat() {
     if (getUser.value == null) return;
 
     props.socket.send(JSON.stringify({
         type: "chat_update",
         chat: {
+            id: getUser.value.chats[props.currentChat].chatId,
+            admin: getUser.value.chats[props.currentChat].id,
             name: new_chat_name.value,
             icon: new_chat_icon.value,
         }
@@ -49,10 +53,12 @@ function update_chat() {
 }
 
 function update_user() {
+    if (getUser.value == null) return;
     props.socket.send(JSON.stringify({
         type: "user_update",
         user: {
-            nick: new_nick.value,
+            id: getUser.value.chats[props.currentChat].id,
+            nickname: new_nick.value,
             color: new_color.value,
         }
     }))
@@ -96,7 +102,7 @@ function sair() {
                         <input class="input" type="color" v-model="new_color" />
                     </div>
                 </div>
-                <div class="field" v-if="getUser.chats[currentChat] != null">
+                <div class="field" v-if="getUser.chats[currentChat] != null && getUser.chats[currentChat].isAdmin">
                     <div class="field">
                         <label class="label">Nome do Chat:</label>
                         <div class="control">

@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import router from '@/router';
 import { useUserStore } from '@/stores/user';
-import { storeToRefs } from 'pinia';
-import { computed, ref } from 'vue';
 
 
 const userStore = useUserStore();

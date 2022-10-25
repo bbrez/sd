@@ -10,6 +10,7 @@ export default class userChat {
     nickname !: string;
     color !: string;
     isAdmin !: boolean;
+    isOnline !: boolean;
 
     id !: number;
     userId !: number;
