@@ -1,16 +1,12 @@
-import { WebSocket } from "ws";
-
-async function send(s: WebSocket, type: string, result: string, data: any | null = null) {
+async function send(s: WebSocket, type: string, data: any | null) {
     if (data != null) {
         s.send(JSON.stringify({
             type: type,
-            result: result,
             data: data,
         }));
     } else {
         s.send(JSON.stringify({
             type: type,
-            result: result,
         }));
     }
 }

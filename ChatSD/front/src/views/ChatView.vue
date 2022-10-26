@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import { storeToRefs } from "pinia";
-import router from "@/router";
 import { useUserStore } from "@/stores/user";
-import Chat from "@/lib/Chat";
-import Message from "@/lib/Message";
-import type userChat from "@/lib/userChat";
+import Chat from "@/lib/model/Chat";
+import Message from "@/lib/model/Message";
+import type userChat from "@/lib/model/userChat";
 import UserModal from "../components/OptionsModal.vue";
+import send from "@/lib/send";
 
 const userStore = useUserStore();
 const { getUser } = storeToRefs(userStore);
@@ -27,9 +27,13 @@ const showModal = ref(false);
 
 function change_chat(uc: userChat) {
   if (getUser.value == null) return;
-  current_chat.value = getUser.value?.chats.findIndex(
+  current_chat.value = getUser.value.chats.findIndex(
     (c) => c.chat.name == uc.chat.name
   );
+
+  send(socket, "connected_users", {
+    chat: getUser.value.chats[current_chat.value].chatId
+  });
 }
 
 function sendMessage() {
@@ -37,14 +41,11 @@ function sendMessage() {
   let chat = getUser.value.chats[current_chat.value];
 
   if (message.value.length > 0) {
-    socket.send(
-      JSON.stringify({
-        type: "message",
-        user: getUser.value.chats[current_chat.value].id,
-        chat: getUser.value.chats[current_chat.value].chatId,
-        content: message.value,
-      })
-    );
+    send(socket, "message", {
+      user: chat.id,
+      chat: chat.chatId,
+      content: message.value,
+    });
     message.value = "";
   }
 }
@@ -70,58 +71,41 @@ function newChat() {
 
   current_chat.value = 0;
 
-  socket.send(
-    JSON.stringify({
-      type: "new_chat",
-      chat: {
-        ...getUser.value.chats[current_chat.value].chat,
-        users: [
-          {
-            ...getUser.value,
-            chats: null,
-          },
-        ],
-        messages: undefined,
-      },
-    })
-  );
+  send(socket, "new_chat", {
+    chat: {
+      ...getUser.value.chats[current_chat.value].chat,
+      messages: undefined,
+      users: [
+        {
+          ...getUser.value,
+          chats: undefined,
+        },
+      ],
+    },
+  });
 }
 
 function addUser() {
   if (getUser.value == null) return;
   if (newUserName.value.length < 4) return;
 
-  socket.send(
-    JSON.stringify({
-      type: "add_user",
-      userName: newUserName.value,
-      chat: { ...getUser.value.chats[current_chat.value].chat, users: null },
-    })
-  );
+  send(socket, "add_user", {
+    username: newUserName.value,
+    chat: getUser.value.chats[current_chat.value].chatId,
+  });
 }
 
 function removeUser(uc: userChat) {
   if (getUser.value == null) return;
   if (!removeMode.value) return;
-  socket.send(
-    JSON.stringify({
-      type: "remove_user",
-      admin: getUser.value.chats[current_chat.value],
-      removed: uc,
-    })
-  );
+
+  send(socket, "remove_user", {
+    admin: getUser.value.chats[current_chat.value].id,
+    remove: uc.id,
+  });
 }
 
 onMounted(() => {
-  if (getUser.value == null) {
-    let storedUser = localStorage.getItem("user");
-    if (storedUser != null) {
-      getUser.value = JSON.parse(storedUser);
-    } else {
-      router.push({ name: "login" });
-    }
-  }
-
   if (getUser.value == null) return;
   if (getUser.value.chats == null) getUser.value.chats = [];
 
@@ -133,12 +117,13 @@ onMounted(() => {
 
   socket.onopen = (e) => {
     console.log("[socket open]");
-    socket.send(
-      JSON.stringify({
-        type: "connect",
-        user: { ...getUser.value, chats: null },
-      })
-    );
+    send(socket, "connect", {
+      user: {
+        ...getUser.value,
+        chats: undefined,
+        password: undefined,
+      },
+    });
   };
 
   socket.onclose = (e) => {
@@ -149,11 +134,36 @@ onMounted(() => {
   socket.onmessage = (e) => {
     if (getUser.value == null) return;
 
-    let message = JSON.parse(e.data);
-    let data = message.data;
-    console.log(message);
+    let answer = JSON.parse(e.data);
+    let data = answer.data;
+    console.log(answer);
 
-    switch (message.type) {
+    if (answer.result == "error") {
+      console.error("Server error ocurred");
+      status.value = data.error;
+      return;
+    }
+
+    switch (answer.type) {
+      case "connect": {
+        getUser.value.chats = data.chats;
+        send(socket, "connected_users", {
+          chat: getUser.value.chats[current_chat.value].chatId,
+        })
+        break;
+      }
+
+      case "connected_users": {
+        for (let u of getUser.value!.chats[current_chat.value].chat.users) {
+          u.isOnline = data.users.findIndex((uid: number) => u.userId == uid) != -1;
+        }
+      }
+
+      //TODO
+      case "new_chat": {
+        break;
+      }
+
       case "message": {
         let uc = getUser.value.chats.findIndex((c) => c.chatId == data.to);
         if (uc == -1) return;
@@ -171,7 +181,8 @@ onMounted(() => {
         );
         break;
       }
-      case "user_added": {
+
+      case "add_user": {
         let chat = getUser.value.chats.find(
           (c) => c.chat.id == data.user.chatId
         );
@@ -179,13 +190,18 @@ onMounted(() => {
         break;
       }
 
-      case "connect": {
-        getUser.value.chats = data.chats;
+      //TODO
+      case "remove_user": {
         break;
       }
 
-      case "error": {
-        status.value = data.error;
+      //TODO
+      case "user_update": {
+        break;
+      }
+
+      //TODO
+      case "chat_update": {
         break;
       }
     }
@@ -200,9 +216,7 @@ onUnmounted(() => {
   <div class="section">
     <div class="columns">
       <div class="column is-2">
-        <div v-if="
-          getUser != null && getUser.chats != null && getUser.chats.length > 0
-        " class="field">
+        <div v-if="getUser != null && getUser.chats != null && getUser.chats.length > 0" class="field">
           <a class="button is-info is-fullwidth" @click="showModal = true">
             <span class="icon"><i class="fa-solid fa-gears"></i></span>
             <span>Opções</span>
@@ -228,9 +242,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-if="
-        getUser != null && getUser.chats != null && getUser.chats.length > 0
-      " class="column">
+      <div v-if="getUser != null && getUser.chats != null && getUser.chats.length > 0" class="column">
         <div class="message is-info">
           <div class="message-header">
             <p>
@@ -240,13 +252,11 @@ onUnmounted(() => {
           </div>
           <div id="msg-pane" class="message-body">
             <div class="block" v-for="mesg of getUser.chats[current_chat].chat.messages">
-              [{{
-                  new Date(mesg.timestamp).toLocaleTimeString([], timeOptions)
-              }}]
+              [{{ new Date(mesg.timestamp).toLocaleTimeString([], timeOptions) }}]
               <b :style="{ color: mesg.from.color }">{{ mesg.from.nickname }}:</b>
-              <span class="ml-1" :style="{ color: mesg.from.color }">{{
-                  mesg.content
-              }}</span>
+              <span class="ml-1" :style="{ color: mesg.from.color }">
+                {{ mesg.content }}
+              </span>
             </div>
           </div>
           <div class="field has-addons">
@@ -261,9 +271,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-if="
-        getUser != null && getUser.chats != null && getUser.chats.length > 0
-      " class="column is-2">
+      <div v-if="getUser != null && getUser.chats != null && getUser.chats.length > 0" class="column is-2">
         <div v-if="getUser.chats[current_chat].isAdmin" class="field">
           <div v-if="!addMode">
             <a class="button is-info is-fullwidth" @click="addMode = true">
@@ -289,10 +297,7 @@ onUnmounted(() => {
               </div>
               <div class="control" style="flex-grow: 1"></div>
               <div class="control">
-                <button class="button is-danger" @click="
-  addMode = false;
-newUserName = '';
-                ">
+                <button class="button is-danger" @click="addMode = false; newUserName = ''">
                   Cancelar
                 </button>
               </div>
@@ -306,7 +311,7 @@ newUserName = '';
             <span> Usuários</span>
           </div>
           <a v-for="c_user in getUser.chats[current_chat].chat.users" class="panel-block" @click="removeUser(c_user)">
-            <span class="panel-icon" :style="{ color: c_user.isOnline ? '#00aa00' : '' }"><i class="fa-solid"
+            <span class="panel-icon" :style="{ color: c_user.isOnline ? '#00aa00' : '#aa0000' }"><i class="fa-solid"
                 :class="c_user.isAdmin ? 'fa-star' : 'fa-user'"></i></span>
             <span>{{ c_user.nickname }}</span>
           </a>

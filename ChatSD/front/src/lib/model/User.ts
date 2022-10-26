@@ -1,4 +1,3 @@
-import type Chat from "./Chat";
 import type userChat from "./userChat";
 
 export default class User {

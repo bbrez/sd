@@ -1,5 +1,4 @@
 import type Chat from "./Chat";
-import type User from "./User";
 import type userChat from "./userChat";
 
 export default class Message {
