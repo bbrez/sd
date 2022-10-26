@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { PrismaClient, User } from '@prisma/client';
+import { Socket } from 'dgram';
 
 const prisma = new PrismaClient();
 
@@ -14,6 +15,16 @@ class UserSocket {
 }
 
 let connections = new Array<UserSocket>();
+
+
+async function message(s: Socket, type: string, result: string, data: any) {
+    s.send(JSON.stringify({
+        type: type,
+        result: result,
+        data: data,
+    }));
+}
+
 
 //TODO logged user handling
 async function main() {
@@ -271,8 +282,6 @@ async function main() {
 
                     //TODO broadcast new info
                     break;
-
-
                 }
 
                 case "message": {
@@ -320,6 +329,10 @@ async function main() {
                     break;
                 }
 
+                default:
+                    console.error("no handler for: ", msgData.type);
+                    throw new Error("not implemented");
+                    break;
             }
         });
 
