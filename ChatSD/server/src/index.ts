@@ -1,13 +1,23 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { PrismaClient, User } from '@prisma/client';
-import { add_user, chat_update, connect, login, message, new_chat, register, remove_user, user_update } from './lib/handlers';
+import { User } from '@prisma/client';
+import {
+    add_user,
+    chat_update,
+    connect,
+    login,
+    message,
+    new_chat,
+    register,
+    remove_user,
+    user_update
+} from './lib/handlers';
+import send from './lib/send';
+import prisma from './lib/db';
 
-const prisma = new PrismaClient();
 
 const server = new WebSocketServer({
     port: 1234,
 });
-
 
 class UserSocket {
     user !: User;
@@ -45,6 +55,26 @@ async function main() {
                     break;
                 }
 
+                case "connected_users": {
+                    let ucs = await prisma.userChat.findMany({
+                        where: {
+                            chatId: msgData.chat.id,
+                        },
+                    });
+
+                    let online = new Array<number>();
+                    connections.filter((c) => {
+                        return ucs.findIndex((uc) => {
+                            return uc.userId == c.user.id;
+                        }) != -1
+                    }).map((con) => {
+                        online.push(con.user.id);
+                    });
+
+                    send(socket, "connected_users", "success", { online: online });
+                    break;
+                }
+
                 case "new_chat": {
                     new_chat(socket, msgData);
                     break;
@@ -62,22 +92,47 @@ async function main() {
 
                 case "message": {
                     let msg = await message(socket, msgData);
-                    if (msg == null) throw "message error";
-                    //TODO broadcast message
+                    connections.filter((c) => {
+                        return msg!.to.users.findIndex((uc) => {
+                            return uc.userId == c.user.id;
+                        }) != -1;
+                    }).map((con) => {
+                        console.log("[Message broadcast]: sending to: ", con.user.name);
+                        send(con.socket, "message", "broadcast", {
+                            to: msg!.chatId,
+                            from: msg!.userChatId,
+                            content: msg!.content,
+                            when: msg!.timestamp,
+                        })
+                    })
                     break;
                 }
 
                 case "chat_update": {
-                    let new_chat = await chat_update(socket, msgData);
-                    if (new_chat == null) throw "chat_update error";
-                    //TODO broadcast changes
+                    let updated_chat = await chat_update(socket, msgData);
+                    if (updated_chat == null || updated_chat == undefined) throw "chat_update error";
+                    connections.filter((c) => {
+                        return updated_chat!.users.findIndex((uc) => {
+                            return uc.userId == c.user.id;
+                        }) != -1;
+                    }).map((con) => {
+                        console.log("[Chat Update Broadcast]: sending to: ", con.user.name);
+                        send(con.socket, "chat_update", "broadcast", { chat: updated_chat });
+                    })
                     break;
                 }
 
                 case "user_update": {
-                    let new_uc = await user_update(socket, msgData);
-                    if (new_uc == null) throw "user_update error";
-                    //TODO broadcast changes
+                    let updated_uc = await user_update(socket, msgData);
+                    if (updated_uc == null) throw "user_update error";
+                    connections.filter((c) => {
+                        return updated_uc?.chat.users.findIndex((uc) => {
+                            return uc.userId == c.user.id;
+                        }) != -1;
+                    }).map((con) => {
+                        console.log("UC Update Broadcast]: sending to: ", con.user.name);
+                        send(con.socket, "user_update", "broadcast", { user: updated_uc });
+                    })
                     break;
                 }
 

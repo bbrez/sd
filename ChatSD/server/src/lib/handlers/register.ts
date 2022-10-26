@@ -10,10 +10,10 @@ async function register(socket: WebSocket, data: any) {
             }
         });
 
-        console.log(`[${getFuncName()}]: Registered user: ${newUser}`);
+        console.log(`[${__filename}]: Registered user: ${newUser}`);
         send(socket, "register", "success", { user: newUser });
     } catch (err) {
-        console.log(`[${getFuncName()}]: Error registering user: ${err}`);
+        console.log(`[${__filename}]: Error registering user: ${err}`);
         send(socket, "register", "error");
     } finally {
         socket.close();

@@ -30,10 +30,10 @@ async function new_chat(socket: WebSocket, data: any) {
             }
         });
 
-        console.log(`[${getFuncName()}]: Chat registered: ${newuc}`,);
-        send(socket, "new_chat", "success", { ...newuc.chat });
+        console.log(`[${__filename}]: Chat registered: ${newuc}`,);
+        send(socket, "new_chat", "success", { chat: { ...newuc.chat } });
     } catch (err) {
-        console.log(`[${getFuncName()}]: Error creating chat: ${err}`);
+        console.log(`[${__filename}]: Error creating chat: ${err}`);
         send(socket, "new_chat", "error");
     }
 }

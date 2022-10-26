@@ -10,7 +10,7 @@ async function add_user(socket: WebSocket, data: any) {
             },
         });
 
-        console.log(`[${getFuncName()}]: Found user: ${user}`);
+        console.log(`[${__filename}]: Found user: ${user}`);
         let chat = await prisma.chat.findFirstOrThrow({
             where: {
                 id: data.chat.id,
@@ -20,7 +20,7 @@ async function add_user(socket: WebSocket, data: any) {
             },
         });
 
-        console.log(`[${getFuncName()}]: Found chat: ${chat}`);
+        console.log(`[${__filename}]: Found chat: ${chat}`);
         if (chat.users.findIndex((u) => u.userId == user.id) != -1) {
             throw "user already in chat";
         }
@@ -43,10 +43,10 @@ async function add_user(socket: WebSocket, data: any) {
             },
         });
 
-        console.log(`[${getFuncName()}]: User added to chat: ${newuc}`);
+        console.log(`[${__filename}]: User added to chat: ${newuc}`);
         send(socket, "add_user", "success", { user: newuc });
     } catch (err) {
-        console.error(`[${getFuncName()}]: Error adding user to chat: ${err}`);
+        console.error(`[${__filename}]: Error adding user to chat: ${err}`);
         send(socket, "add_user", "error");
     }
 }

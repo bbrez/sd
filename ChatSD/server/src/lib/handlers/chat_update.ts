@@ -19,6 +19,9 @@ async function chat_update(socket: WebSocket, data: any) {
                 name: data.chat.name,
                 icon: data.chat.icon,
             },
+            include: {
+                users: true
+            }
         });
 
         return chat;

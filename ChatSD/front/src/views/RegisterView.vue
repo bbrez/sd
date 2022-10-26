@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import router from '@/router';
-
+import { computed, ref } from "vue";
+import router from "@/router";
 
 const user = ref({ name: "", password: "" });
 const formState = ref("clean");
@@ -20,30 +19,32 @@ function register() {
   socket.onmessage = (msg) => {
     let answ = JSON.parse(msg.data);
     switch (answ.result) {
-      case 'success':
+      case "success":
         reset();
-        router.push({ name: 'login' });
+        router.push({ name: "login" });
         break;
-      case 'error':
-        formState.value = 'error';
+      case "error":
+        formState.value = "error";
         break;
       default:
-        console.log('wtf?');
+        console.log("wtf?");
     }
   };
 
   socket.onopen = (e) => {
     formState.value = "sending";
     console.log("[socket open]");
-    socket.send(JSON.stringify({
-      type: "register",
-      user: { name: user.value.name, password: user.value.password }
-    }))
+    socket.send(
+      JSON.stringify({
+        type: "register",
+        user: { name: user.value.name, password: user.value.password },
+      })
+    );
   };
 }
 
 const formCheck = computed(() => {
-  let errors = new Array<string>;
+  let errors = new Array<string>();
   let nameLen = user.value.name.length;
   let passLen = user.value.password.length;
 
@@ -54,9 +55,14 @@ const formCheck = computed(() => {
   if (passLen == 0) errors.push("empty_password");
 
   switch (formState.value) {
-    case 'clean': break;
-    case 'error': errors.push('taken_username'); break;
-    default: errors.push('state_error'); break;
+    case "clean":
+      break;
+    case "error":
+      errors.push("taken_username");
+      break;
+    default:
+      errors.push("state_error");
+      break;
   }
 
   return errors;
@@ -71,34 +77,85 @@ const formCheck = computed(() => {
           <div class="field">
             <label for="username" class="label">Nome de usuário</label>
             <div class="control">
-              <input class="input"
-                :class="{ 'is-danger': ['taken_username', 'short_username'].every((error) => formCheck.includes(error)) }"
-                type="text" placeholder="Nome de usuário" v-model="user.name" />
+              <input
+                class="input"
+                :class="{
+                  'is-danger': ['taken_username', 'short_username'].every(
+                    (error) => formCheck.includes(error)
+                  ),
+                }"
+                type="text"
+                placeholder="Nome de usuário"
+                v-model="user.name"
+              />
             </div>
-            <p v-if="formCheck.includes('taken_username')" class="help is-danger">Usuário já existente</p>
-            <p v-if="formCheck.includes('short_username')" class="help is-danger">Mínimo 4 caracteres</p>
-            <p v-if="formCheck.includes('long_username')" class="help is-danger">Máximo 20 caracteres</p>
+            <p
+              v-if="formCheck.includes('taken_username')"
+              class="help is-danger"
+            >
+              Usuário já existente
+            </p>
+            <p
+              v-if="formCheck.includes('short_username')"
+              class="help is-danger"
+            >
+              Mínimo 4 caracteres
+            </p>
+            <p
+              v-if="formCheck.includes('long_username')"
+              class="help is-danger"
+            >
+              Máximo 20 caracteres
+            </p>
           </div>
           <div class="field">
             <label for="password" class="label">Senha</label>
             <div class="control">
-              <input class="input" :class="{ 'is-danger': formCheck.includes('short_password') }" type="password"
-                placeholder="Senha" v-model="user.password">
+              <input
+                class="input"
+                :class="{ 'is-danger': formCheck.includes('short_password') }"
+                type="password"
+                placeholder="Senha"
+                v-model="user.password"
+              />
             </div>
-            <p v-if="formCheck.includes('short_password')" class="help is-danger">Mínimo 4 caracteres</p>
+            <p
+              v-if="formCheck.includes('short_password')"
+              class="help is-danger"
+            >
+              Mínimo 4 caracteres
+            </p>
           </div>
           <div class="field is-grouped">
             <div class="control">
-              <button class="button is-info" :class="{ 'is-loading': formState == 'sending' }" type="button"
-                :disabled="formCheck.length > 0" @click="register()">Registrar</button>
+              <button
+                class="button is-info"
+                :class="{ 'is-loading': formState == 'sending' }"
+                type="button"
+                :disabled="formCheck.length > 0"
+                @click="register()"
+              >
+                Registrar
+              </button>
             </div>
             <div class="control">
-              <button class="button is-warning is-light" type="reset" @click="reset()">Cancelar</button>
+              <button
+                class="button is-warning is-light"
+                type="reset"
+                @click="reset()"
+              >
+                Cancelar
+              </button>
             </div>
             <div class="control" style="flex-grow: 1"></div>
             <div class="control">
-              <button class="button is-link is-light" type="button"
-                @click="$router.push({ name: 'login' })">Login</button>
+              <button
+                class="button is-link is-light"
+                type="button"
+                @click="$router.push({ name: 'login' })"
+              >
+                Login
+              </button>
             </div>
           </div>
         </form>

@@ -11,6 +11,13 @@ async function user_update(socket: WebSocket, data: any) {
                 nickname: data.user.nickname,
                 color: data.user.color,
             },
+            include: {
+                chat: {
+                    include: {
+                        users: true
+                    }
+                }
+            }
         });
 
         return uc;

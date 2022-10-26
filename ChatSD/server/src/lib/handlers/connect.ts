@@ -10,7 +10,7 @@ async function connect(socket: WebSocket, data: any) {
             }
         });
 
-        console.log(`[${getFuncName()}]: User connected: ${user}`);
+        console.log(`[${__filename}]: User connected: ${user}`);
 
         let ucs = await prisma.userChat.findMany({
             where: {
@@ -31,13 +31,13 @@ async function connect(socket: WebSocket, data: any) {
             },
         });
 
-        console.log(`[${getFuncName()}]: UCs found: ${ucs}`);
+        console.log(`[${__filename}]: UCs found: ${ucs}`);
 
         send(socket, "connect", "success", { chats: [...ucs] });
 
         return user;
     } catch (err) {
-        console.log(`[${getFuncName()}]: Error connecting: ${err}`);
+        console.log(`[${__filename}]: Error connecting: ${err}`);
         send(socket, "connect", "error");
         socket.close();
     } // não fecha a conexão;
