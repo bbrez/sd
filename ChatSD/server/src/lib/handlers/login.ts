@@ -13,10 +13,10 @@ async function login(socket: WebSocket, data: any) {
             }
         });
 
-        console.log(`[${__filename}]: Loaded user: ${user}`);
+        console.log(`[${__filename}]: Loaded user: ${JSON.stringify({ ...user, password: null })}`);
         send(socket, "login", "success", { user: { ...user, password: null } });
     } catch (err) {
-        console.log(`[${__filename}]: Error logging user: ${err}`);
+        console.log(`[${__filename}]: Error logging user: ${err} `);
         send(socket, "login", "error");
     } finally {
         socket.close();

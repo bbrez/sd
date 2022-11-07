@@ -83,12 +83,6 @@ function update() {
         update_chat();
     }
 }
-
-function sair() {
-    localStorage.removeItem("user");
-    setUser(null);
-    router.push({ name: "login" });
-}
 </script>
 <template>
     <SimpleModal v-if="getUser != null" :show="show" @close="$emit('close')">
@@ -133,14 +127,11 @@ function sair() {
                     <div class="control">
                         <button class="button is-primary" @click="update()">Salvar</button>
                     </div>
+                    <div class="control" style="flex-grow: 1"></div>
                     <div class="control">
                         <button class="button is-light is-warning" @click="$emit('close')">
                             Cancelar
                         </button>
-                    </div>
-                    <div class="control" style="flex-grow: 1"></div>
-                    <div class="control">
-                        <button class="button is-danger" @click="sair()">Sair</button>
                     </div>
                 </div>
             </div>

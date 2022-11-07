@@ -7,6 +7,7 @@ import Message from "@/lib/model/Message";
 import type userChat from "@/lib/model/userChat";
 import UserModal from "../components/OptionsModal.vue";
 import send from "@/lib/send";
+import router from "@/router";
 
 const userStore = useUserStore();
 const { getUser } = storeToRefs(userStore);
@@ -22,8 +23,14 @@ const current_chat = ref(0);
 
 const socket = new WebSocket("ws:127.0.0.1:1234");
 
-const timeOptions = { hour12: false };
+const timeOptions = { hour12: false, timeStyle: "short" };
 const showModal = ref(false);
+
+function sair() {
+  localStorage.removeItem("user");
+  setUser(null);
+  router.push({ name: "login" });
+}
 
 function change_chat(uc: userChat) {
   if (getUser.value == null) return;
@@ -67,9 +74,6 @@ function newChat() {
   };
 
   userchat.chat.users.push(userchat);
-  getUser.value.chats.unshift(userchat);
-
-  current_chat.value = 0;
 
   send(socket, "new_chat", {
     chat: {
@@ -90,7 +94,7 @@ function addUser() {
   if (newUserName.value.length < 4) return;
 
   send(socket, "add_user", {
-    username: newUserName.value,
+    userName: newUserName.value,
     chat: getUser.value.chats[current_chat.value].chatId,
   });
 }
@@ -123,7 +127,8 @@ onMounted(() => {
         chats: undefined,
         password: undefined,
       },
-    });
+    },
+    );
   };
 
   socket.onclose = (e) => {
@@ -154,13 +159,18 @@ onMounted(() => {
       }
 
       case "connected_users": {
-        for (let u of getUser.value!.chats[current_chat.value].chat.users) {
-          u.isOnline = data.users.findIndex((uid: number) => u.userId == uid) != -1;
+        for (let u of getUser.value.chats[current_chat.value].chat.users) {
+          u.isOnline = Array.from(data.online).findIndex((uid) => u.userId == uid) != -1;
         }
+
+        break;
       }
 
-      //TODO
       case "new_chat": {
+
+        getUser.value.chats.unshift(data.chat);
+        current_chat.value += 1;
+
         break;
       }
 
@@ -190,18 +200,56 @@ onMounted(() => {
         break;
       }
 
-      //TODO
       case "remove_user": {
+        if (data.user.userId == getUser.value.id) {
+          getUser.value.chats = getUser.value.chats.filter((uc) => {
+            uc.id != data.removed.chatId;
+          });
+        } else {
+          for (let uc of getUser.value.chats) {
+            if (uc.chatId == data.removed.chatId) {
+              uc.chat.users = uc.chat.users.filter((cuc) => {
+                cuc.id != data.removed.id;
+              });
+            }
+          }
+        }
+
         break;
       }
 
-      //TODO
       case "user_update": {
+        if (data.user.userId == getUser.value.id) {
+          for (let uc of getUser.value.chats) {
+            if (uc.chatId == data.user.chatId) {
+              uc.nickname = data.user.nickname;
+              uc.color = data.user.color;
+            }
+          }
+        } else {
+          for (let uc of getUser.value.chats) {
+            if (uc.chatId == data.user.chatId) {
+              for (let user of uc.chat.users) {
+                if (user.id == data.user.id) {
+                  user.nickname = data.user.nickname;
+                  user.color = data.user.color;
+                }
+              }
+            }
+          }
+        }
+
         break;
       }
 
-      //TODO
       case "chat_update": {
+        for (let uc of getUser.value.chats) {
+          if (uc.chatId == data.chat.id) {
+            uc.chat.name = data.chat.name;
+            uc.chat.icon = data.chat.icon;
+          }
+        }
+
         break;
       }
     }
@@ -240,6 +288,9 @@ onUnmounted(() => {
             {{ uc.chat.name }}
           </a>
         </div>
+        <div class="control">
+          <button class="button is-danger is-fullwidth" @click="sair()">Sair</button>
+        </div>
       </div>
 
       <div v-if="getUser != null && getUser.chats != null && getUser.chats.length > 0" class="column">
@@ -252,7 +303,7 @@ onUnmounted(() => {
           </div>
           <div id="msg-pane" class="message-body">
             <div class="block" v-for="mesg of getUser.chats[current_chat].chat.messages">
-              [{{ new Date(mesg.timestamp).toLocaleTimeString([], timeOptions) }}]
+              [{{ new Date(mesg.timestamp).toLocaleString([], timeOptions) }}]
               <b :style="{ color: mesg.from.color }">{{ mesg.from.nickname }}:</b>
               <span class="ml-1" :style="{ color: mesg.from.color }">
                 {{ mesg.content }}
@@ -311,7 +362,7 @@ onUnmounted(() => {
             <span> Usuários</span>
           </div>
           <a v-for="c_user in getUser.chats[current_chat].chat.users" class="panel-block" @click="removeUser(c_user)">
-            <span class="panel-icon" :style="{ color: c_user.isOnline ? '#00aa00' : '#aa0000' }"><i class="fa-solid"
+            <span class="panel-icon" :style="{ color: c_user.isOnline ? '#00cc00' : '#cc0000' }"><i class="fa-solid"
                 :class="c_user.isAdmin ? 'fa-star' : 'fa-user'"></i></span>
             <span>{{ c_user.nickname }}</span>
           </a>

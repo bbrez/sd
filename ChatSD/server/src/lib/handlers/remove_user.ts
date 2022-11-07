@@ -6,23 +6,27 @@ async function remove_user(socket: WebSocket, data: any) {
     try {
         let admin = await prisma.userChat.findFirstOrThrow({
             where: {
-                id: data.admin.id,
+                id: data.admin,
                 isAdmin: true,
-                chatId: data.chat.id,
             }
         });
 
-        console.log(`[${__filename}]: Admin found: ${admin}`);
+        console.log(`[${__filename}]: Admin found: ${JSON.stringify(admin)}`);
         let remove_uc = await prisma.userChat.delete({
             where: {
-                id: data.removed.id,
+                id: data.remove,
+            },
+            include: {
+                chat: true
             }
         });
 
-        console.log(`[${__filename}]: Deleted user from chat: ${remove_uc}`);
+        console.log(`[${__filename}]: Deleted user from chat: ${JSON.stringify(remove_uc)}`);
         send(socket, "remove_user", "success", { removed: remove_uc });
+
+        return remove_uc;
     } catch (err) {
-        //TODO error handling
+        console.log("error");
     }
 }
 

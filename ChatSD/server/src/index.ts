@@ -27,7 +27,6 @@ class UserSocket {
 let connections = new Array<UserSocket>();
 
 
-//TODO logged user handling
 async function main() {
     server.on('connection', async (socket) => {
         console.log("[new connection]");
@@ -35,21 +34,21 @@ async function main() {
         socket.on('message', async (msg) => {
             console.log('[received]:' + msg);
 
-            let msgData = JSON.parse(msg.toString());
+            let msgObj = JSON.parse(msg.toString());
 
-            switch (msgData.type) {
+            switch (msgObj.type) {
                 case "register": {
-                    register(socket, msgData);
+                    register(socket, msgObj.data);
                     break;
                 }
 
                 case "login": {
-                    login(socket, msgData);
+                    login(socket, msgObj.data);
                     break;
                 }
 
                 case "connect": {
-                    let usr = await connect(socket, msgData);
+                    let usr = await connect(socket, msgObj.data);
                     if (usr == null) throw "connection error";
                     connections.push({ user: usr, socket: socket });
                     break;
@@ -58,7 +57,7 @@ async function main() {
                 case "connected_users": {
                     let ucs = await prisma.userChat.findMany({
                         where: {
-                            chatId: msgData.chat.id,
+                            chatId: msgObj.data.chat.id,
                         },
                     });
 
@@ -66,7 +65,7 @@ async function main() {
                     connections.filter((c) => {
                         return ucs.findIndex((uc) => {
                             return uc.userId == c.user.id;
-                        }) != -1
+                        }) != -1;
                     }).map((con) => {
                         online.push(con.user.id);
                     });
@@ -76,22 +75,58 @@ async function main() {
                 }
 
                 case "new_chat": {
-                    new_chat(socket, msgData);
+                    new_chat(socket, msgObj.data);
                     break;
                 }
 
                 case "add_user": {
-                    add_user(socket, msgData);
+                    let newuc = await add_user(socket, msgObj.data);
+                    if (newuc == null) return;
+
+                    let ucs = await prisma.userChat.findMany({
+                        where: {
+                            chatId: newuc.chatId,
+                        },
+                    });
+
+                    connections.filter((c) => {
+                        return ucs.findIndex((uc) => {
+                            return uc.userId == c.user.id;
+                        }) != -1;
+                    }).map((con) => {
+                        send(con.socket, "add_user", "success", newuc);
+                    })
+
                     break;
                 }
 
                 case "remove_user": {
-                    remove_user(socket, msgData);
+                    let removed = await remove_user(socket, msgObj.data);
+                    if (removed == null) return;
+
+                    let ucs = await prisma.userChat.findMany({
+                        where: {
+                            chatId: removed.chatId,
+                        },
+                        include: {
+                            user: true,
+                        }
+                    });
+
+                    if (ucs == null || ucs.length == 0) throw "deu ruim";
+                    connections.filter((c) => {
+                        return ucs.findIndex((uc) => {
+                            return uc.userId == c.user.id;
+                        }) != -1;
+                    }).map((con) => {
+                        send(con.socket, "remove_user", "success",)
+                    })
+
                     break;
                 }
 
                 case "message": {
-                    let msg = await message(socket, msgData);
+                    let msg = await message(socket, msgObj.data);
                     connections.filter((c) => {
                         return msg!.to.users.findIndex((uc) => {
                             return uc.userId == c.user.id;
@@ -109,7 +144,7 @@ async function main() {
                 }
 
                 case "chat_update": {
-                    let updated_chat = await chat_update(socket, msgData);
+                    let updated_chat = await chat_update(socket, msgObj.data);
                     if (updated_chat == null || updated_chat == undefined) throw "chat_update error";
                     connections.filter((c) => {
                         return updated_chat!.users.findIndex((uc) => {
@@ -123,7 +158,7 @@ async function main() {
                 }
 
                 case "user_update": {
-                    let updated_uc = await user_update(socket, msgData);
+                    let updated_uc = await user_update(socket, msgObj.data);
                     if (updated_uc == null) throw "user_update error";
                     connections.filter((c) => {
                         return updated_uc?.chat.users.findIndex((uc) => {
@@ -137,7 +172,7 @@ async function main() {
                 }
 
                 default:
-                    console.error("no handler for: ", msgData.type);
+                    console.error("no handler for: ", msgObj.type);
                     throw new Error("not implemented");
             }
         });

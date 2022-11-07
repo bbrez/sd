@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import router from "@/router";
+import send from "@/lib/send";
 
 const user = ref({ name: "", password: "" });
 const formState = ref("clean");
@@ -34,12 +35,13 @@ function register() {
   socket.onopen = (e) => {
     formState.value = "sending";
     console.log("[socket open]");
-    socket.send(
-      JSON.stringify({
-        type: "register",
-        user: { name: user.value.name, password: user.value.password },
-      })
-    );
+
+    send(socket, "register", {
+      user: {
+        name: user.value.name,
+        password: user.value.password
+      }
+    });
   };
 }
 
@@ -77,83 +79,47 @@ const formCheck = computed(() => {
           <div class="field">
             <label for="username" class="label">Nome de usuário</label>
             <div class="control">
-              <input
-                class="input"
-                :class="{
-                  'is-danger': ['taken_username', 'short_username'].every(
-                    (error) => formCheck.includes(error)
-                  ),
-                }"
-                type="text"
-                placeholder="Nome de usuário"
-                v-model="user.name"
-              />
+              <input class="input" :class="{
+                'is-danger': ['taken_username', 'short_username'].every(
+                  (error) => formCheck.includes(error)
+                ),
+              }" type="text" placeholder="Nome de usuário" v-model="user.name" />
             </div>
-            <p
-              v-if="formCheck.includes('taken_username')"
-              class="help is-danger"
-            >
+            <p v-if="formCheck.includes('taken_username')" class="help is-danger">
               Usuário já existente
             </p>
-            <p
-              v-if="formCheck.includes('short_username')"
-              class="help is-danger"
-            >
+            <p v-if="formCheck.includes('short_username')" class="help is-danger">
               Mínimo 4 caracteres
             </p>
-            <p
-              v-if="formCheck.includes('long_username')"
-              class="help is-danger"
-            >
+            <p v-if="formCheck.includes('long_username')" class="help is-danger">
               Máximo 20 caracteres
             </p>
           </div>
           <div class="field">
             <label for="password" class="label">Senha</label>
             <div class="control">
-              <input
-                class="input"
-                :class="{ 'is-danger': formCheck.includes('short_password') }"
-                type="password"
-                placeholder="Senha"
-                v-model="user.password"
-              />
+              <input class="input" :class="{ 'is-danger': formCheck.includes('short_password') }" type="password"
+                placeholder="Senha" v-model="user.password" />
             </div>
-            <p
-              v-if="formCheck.includes('short_password')"
-              class="help is-danger"
-            >
+            <p v-if="formCheck.includes('short_password')" class="help is-danger">
               Mínimo 4 caracteres
             </p>
           </div>
           <div class="field is-grouped">
             <div class="control">
-              <button
-                class="button is-info"
-                :class="{ 'is-loading': formState == 'sending' }"
-                type="button"
-                :disabled="formCheck.length > 0"
-                @click="register()"
-              >
+              <button class="button is-info" :class="{ 'is-loading': formState == 'sending' }" type="button"
+                :disabled="formCheck.length > 0" @click="register()">
                 Registrar
               </button>
             </div>
             <div class="control">
-              <button
-                class="button is-warning is-light"
-                type="reset"
-                @click="reset()"
-              >
+              <button class="button is-warning is-light" type="reset" @click="reset()">
                 Cancelar
               </button>
             </div>
             <div class="control" style="flex-grow: 1"></div>
             <div class="control">
-              <button
-                class="button is-link is-light"
-                type="button"
-                @click="$router.push({ name: 'login' })"
-              >
+              <button class="button is-link is-light" type="button" @click="$router.push({ name: 'login' })">
                 Login
               </button>
             </div>
